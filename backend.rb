@@ -11,6 +11,26 @@ ENV["AUTHY_API_URL"] ||= "https://api.authy.com"
 StatusOK     = 200
 StatusFailed = 400
 
+DOCUMENTATION = %@To start the registration process call:
+
+    POST /registration/start
+    params:
+      country_code=<phone country code, ex: 1>
+      phone_number=<user's phone number>
+      email=<user's email>
+      via=sms
+
+This will send a pin to the user, then you have to capture it in your app and call:
+
+    POST /registration/complete
+    params:
+      country_code=<phone country code, ex: 1>
+      phone_number=<user's phone number>
+      pin=<pin>
+
+If the <pin> is valid this end point will return a registration token that you need to pass to the SDK to complete the registration process.
+@
+
 helpers do
   def respond_with(status:, body: {})
     halt status, {'Content-Type' => 'application/json'}, body.to_json
@@ -29,6 +49,12 @@ helpers do
     end
     new_params
   end
+end
+
+get "/" do
+  content_type :text
+
+  DOCUMENTATION
 end
 
 post "/registration/start" do
