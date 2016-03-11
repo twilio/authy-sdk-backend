@@ -1,0 +1,7 @@
+{
+  "name": "Authy SDK Backend",
+  "description": "A sample for the Authy SDK Backend",
+  "repository": "https://github.com/authy/authy-sdk-backend",
+  "logo": "https://www.authy.com/img/logos/authy-2fa.svg",
+  "keywords": ["ruby", "authy", "sdk"]
+}
