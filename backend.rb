@@ -85,7 +85,7 @@ post "/registration/complete" do
 
   if response.code == 200
     authy_response = JSON.parse(response.body)
-    respond_with status: StatusOK, registration_token: authy_response["registration_token"]
+    respond_with status: StatusOK, body: {registration_token: authy_response["registration_token"]}
   end
 
   respond_with status: StatusFailed
