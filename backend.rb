@@ -54,7 +54,7 @@ post "/registration" do
   response = RestClient.post(build_url("/protected/json/sdk/registrations"), params_for_authy)
 
   if response.code == 200
-    authy_response = JSON.parse(response.body)
+    authy_response = JSON.parse(response.body), body: {registration_token: authy_response["registration_token"]}
     respond_with status: StatusOK
   end
 
