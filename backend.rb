@@ -51,13 +51,14 @@ post "/registration" do
 
   params_for_authy = build_params_for_authy(:authy_id)
 
-  response = RestClient.post(build_url("/protected/json/sdk/registrations"), params_for_authy)
+  response = RestClient.post(build_url("/protected/json/sdk/registrations"), params_for_authy) {|r| r }
+
+  authy_response = JSON.parse(response.body)
 
   if response.code == 200
-    authy_response = JSON.parse(response.body)
     respond_with status: StatusOK, body: {registration_token: authy_response["registration_token"]}
   end
 
-  respond_with status: StatusFailed
+  respond_with status: StatusFailed, body: {message: authy_response["message"]}
 end
 
