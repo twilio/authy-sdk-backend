@@ -13,22 +13,11 @@ StatusFailed = 400
 
 DOCUMENTATION = %@To start the registration process call:
 
-    POST /registration/start
+    POST /registration
     params:
-      country_code=<phone country code, ex: 1>
-      phone_number=<user's phone number>
-      email=<user's email>
-      via=sms
+      authy_id<user's authy id>
 
-This will send a pin to the user, then you have to capture it in your app and call:
-
-    POST /registration/complete
-    params:
-      country_code=<phone country code, ex: 1>
-      phone_number=<user's phone number>
-      pin=<pin>
-
-If the <pin> is valid this end point will return a registration token that you need to pass to the SDK to complete the registration process.
+This will return a registration token that you need to pass to the SDK to complete the registration process.
 @
 
 helpers do
@@ -57,37 +46,19 @@ get "/" do
   DOCUMENTATION
 end
 
-post "/registration/start" do
-  param :country_code, Integer, required: true
-  param :phone_number, String, required: true
-  param :email, String, required: true
-  param :via, String, required: true, in: ["sms", "call"]
+post "/registration" do
+  param :authy_id, Integer, required: true
 
-  params_for_authy = build_params_for_authy(:country_code, :phone_number, :email, :via)
+  params_for_authy = build_params_for_authy(:authy_id)
 
-  response = RestClient.post(build_url("/protected/json/registrations/start"), params_for_authy)
+  response = RestClient.post(build_url("/protected/json/sdk/registrations"), params_for_authy) {|r| r }
 
-  if response.code == 200
-    respond_with status: StatusOK
-  end
-
-  respond_with status: StatusFailed
-end
-
-post "/registration/complete" do
-  param :country_code, Integer, required: true
-  param :phone_number, String, required: true
-  param :pin, String, required: true
-
-  params_for_authy = build_params_for_authy(:country_code, :phone_number, :pin)
-
-  response = RestClient.post(build_url("/protected/json/registrations/confirm"), params_for_authy)
+  parsed_response = JSON.parse(response.body)
 
   if response.code == 200
-    authy_response = JSON.parse(response.body)
-    respond_with status: StatusOK, body: {registration_token: authy_response["registration_token"]}
+    respond_with status: StatusOK, body: {registration_token: parsed_response["registration_token"]}
   end
 
-  respond_with status: StatusFailed
+  respond_with status: StatusFailed, body: {message: parsed_response["message"]}
 end
 
