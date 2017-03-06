@@ -1,4 +1,6 @@
 require 'bundler/setup'
+require 'json'
+require 'net/http'
 
 Bundler.require
 
@@ -8,16 +10,24 @@ end
 
 ENV["AUTHY_API_URL"] ||= "https://api.authy.com"
 
-StatusOK     = 200
-StatusFailed = 400
-
 DOCUMENTATION = %@To start the registration process call:
 
     POST /registration
     params:
-      authy_id<user's authy id>
+      authy_id <user's authy id>
 
 This will return a registration token that you need to pass to the SDK to complete the registration process.
+
+
+NOTE
+----
+In order to get an authy_id you must register the user through this call:
+POST #{ENV["AUTHY_API_URL"]}/protected/json/sdk/registrations
+  params:
+    api_key=#{ENV["AUTHY_API_KEY"]}
+    user[email]=USER_EMAIL String (required)
+    user[cellphone]=USER_PHONE_NUMBER String (required)
+    user[country_code]=PHONE_COUNTRY_CODE String (required)
 @
 
 helpers do
@@ -29,14 +39,11 @@ helpers do
     "#{ENV["AUTHY_API_URL"]}#{path}"
   end
 
-  def build_params_for_authy(*params_to_copy)
-    new_params = {
-      api_key: ENV["AUTHY_API_KEY"]
+  def build_params_for_authy(authy_id)
+    {
+      api_key: ENV["AUTHY_API_KEY"],
+      authy_id: authy_id
     }
-    params_to_copy.each do |param_name|
-      new_params[param_name] = params[param_name]
-    end
-    new_params
   end
 end
 
@@ -49,16 +56,19 @@ end
 post "/registration" do
   param :authy_id, Integer, required: true
 
-  params_for_authy = build_params_for_authy(:authy_id)
+  params_for_authy = build_params_for_authy(params[:authy_id])
 
-  response = RestClient.post(build_url("/protected/json/sdk/registrations"), params_for_authy) {|r| r }
+  response = Net::HTTP.post_form(URI.parse(build_url("/protected/json/sdk/registrations")), params_for_authy)
+  response_code = response.code.to_i
 
   parsed_response = JSON.parse(response.body)
 
-  if response.code == 200
-    respond_with status: StatusOK, body: {registration_token: parsed_response["registration_token"]}
-  end
+  if response_code == 200
+    respond_with status: response_code, body: {registration_token: parsed_response["registration_token"] }
 
-  respond_with status: StatusFailed, body: {message: parsed_response["message"]}
+  else
+    respond_with status: response_code, body: parsed_response
+
+  end
 end
 
