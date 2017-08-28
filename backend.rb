@@ -65,7 +65,7 @@ post "/registration" do
   param :authy_id, Integer, required: true
 
   integration_api_key = ENV["AUTHY_INTEGRATION_API_KEY"]
-  token = build_registration_token(params[:authy_id], ENV["APP_ID"], api_key, ENV["ACCOUNT_SID"])
+  token = build_registration_token(params[:authy_id], ENV["APP_ID"], integration_api_key, ENV["ACCOUNT_SID"])
 
   respond_with status: 200, body: {registration_token: token, integration_api_key: integration_api_key}
 
