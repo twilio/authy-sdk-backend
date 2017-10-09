@@ -1,6 +1,7 @@
 require 'bundler/setup'
 require 'json'
 require 'net/http'
+require 'jwt'
 
 Bundler.require
 
@@ -39,12 +40,19 @@ helpers do
     "#{ENV["AUTHY_API_URL"]}#{path}"
   end
 
-  def build_params_for_authy(authy_id)
-    {
-      api_key: ENV["AUTHY_API_KEY"],
-      authy_id: authy_id
-    }
+  def build_registration_token(authy_id, app_id, hmac_secret, account_sid)
+
+      payload = {:jti => '#{app_id}-#{Time.now.to_i}', :iss =>  app_id, :sub => account_sid, :nbf => Time.now.to_i - 60, :exp => Time.now.to_i + 10*3600,
+        :grants => {
+          :identity => "",
+          :authenticator => {
+            :authy_id => authy_id
+          }
+      }}
+
+      token = JWT.encode payload, hmac_secret, 'HS256'
   end
+
 end
 
 get "/" do
@@ -56,20 +64,11 @@ end
 post "/registration" do
   param :authy_id, Integer, required: true
 
-  params_for_authy = build_params_for_authy(params[:authy_id])
+  integration_api_key = ENV["AUTHY_INTEGRATION_API_KEY"]
+  token = build_registration_token(params[:authy_id], ENV["APP_ID"], integration_api_key, ENV["ACCOUNT_SID"])
 
-  response = Net::HTTP.post_form(URI.parse(build_url("/protected/json/sdk/registrations")), params_for_authy)
-  response_code = response.code.to_i
+  respond_with status: 200, body: {registration_token: token, integration_api_key: integration_api_key}
 
-  parsed_response = JSON.parse(response.body)
-
-  if response_code == 200
-    respond_with status: response_code, body: {registration_token: parsed_response["registration_token"] }
-
-  else
-    respond_with status: response_code, body: parsed_response
-
-  end
 end
 
 post "/verify/token" do
