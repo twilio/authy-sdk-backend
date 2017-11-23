@@ -50,11 +50,11 @@ post "/v1/:environment/:app_id/registration" do |environment, app_id|
 end
 
 post "/v2/:environment/registration" do |environment|
-  param :user_id, Integer, required: true
-  param :apps, Array
+  param :user_id, String, required: true
+  param :app_ids, Array
 
   # If apps are not indicated, add the user to all of them.
-  params[:apps] ||= API_KEYS["v2"][environment]
+  params[:app_ids] ||= API_KEYS["v2"][environment]
 
   respond_with status: 404, body: "environment should be [prod|stg]" unless ["prod", "stg"].include? environment
 
@@ -68,7 +68,7 @@ post "/v2/:environment/registration" do |environment|
     grants: {
       authenticator: {
         user_id: params[:user_id],
-        apps: params[:apps]
+        app_ids: params[:app_ids]
       }
     }
   }
