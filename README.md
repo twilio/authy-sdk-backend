@@ -22,7 +22,7 @@ returns:
 
 ### Registration for Twilio Authenticator SDK version 1
 ```
-POST /v1/[prod|stg]/registration
+POST /v1/[prod|stg]/app_id/registration
 params:
 authy_id, required
 ```
