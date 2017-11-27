@@ -2,6 +2,7 @@ require 'bundler/setup'
 require 'json'
 require 'net/http'
 require 'yaml'
+require "rdiscount"
 
 Bundler.require
 
@@ -22,9 +23,7 @@ helpers do
 end
 
 get "/" do
-  content_type :text
-
-  send_file("usage.txt")
+  markdown File.read("README.md")
 end
 
 post "/v1/:environment/:app_id/registration" do |environment, app_id|

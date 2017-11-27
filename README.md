@@ -33,6 +33,16 @@ returns:
 }
 ```
 
+#### Backend implementation for version 1
+In order to get an authy_id you must register the user through this call:
+POST https://<AUTHY_API_URL>/protected/json/sdk/registrations
+
+  params:
+    api_key="Your AUTHY_API_KEY"
+    user[email]=USER_EMAIL String (required)
+    user[cellphone]=USER_PHONE_NUMBER String (required)
+    user[country_code]=PHONE_COUNTRY_CODE String (required)
+
 ### Registration for Twilio Authenticator SDK version 2
 
 ```
@@ -54,4 +64,6 @@ returns:
 }
 ```
 *Note: jwt is signed with the integration_api_key*
+
+
 
