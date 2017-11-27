@@ -39,8 +39,13 @@ returns:
 POST /v2/[prod|stg]/registration
 params:
 - user_id, required
-- apps[], array of app_ids. *If omitted the registration_token will indicate all apps in the `api_keys.yml` file for the given environment and version.*
-`POST /v2/stg/registration?user_id=12345`
+- app_ids[], array of app_ids. *If omitted the registration_token will indicate all apps in the `api_keys.yml` file for the given environment and version.*
+
+POST /v2/stg/registration
+form params:
+- user_id: "12345"
+- app_ids[]: app_1
+- app_ids[]: app_2
 ```
 returns:
 ```
