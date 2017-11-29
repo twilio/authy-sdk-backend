@@ -1,6 +1,8 @@
 require 'bundler/setup'
 require 'json'
 require 'net/http'
+require 'yaml'
+require "rdiscount"
 
 Bundler.require
 
@@ -8,57 +10,31 @@ if File.exist?("env.rb")
   load "./env.rb"
 end
 
-ENV["AUTHY_API_URL"] ||= "https://api.authy.com"
-
-DOCUMENTATION = %@To start the registration process call:
-
-    POST /registration
-    params:
-      authy_id <user's authy id>
-
-This will return a registration token that you need to pass to the SDK to complete the registration process.
-
-
-NOTE
-----
-In order to get an authy_id you must register the user through this call:
-POST #{ENV["AUTHY_API_URL"]}/protected/json/sdk/registrations
-  params:
-    api_key="Your AUTHY_API_KEY"
-    user[email]=USER_EMAIL String (required)
-    user[cellphone]=USER_PHONE_NUMBER String (required)
-    user[country_code]=PHONE_COUNTRY_CODE String (required)
-@
+API_KEYS = YAML.load_file('api_keys.yml')
 
 helpers do
   def respond_with(status:, body: {})
     halt status, {'Content-Type' => 'application/json'}, body.to_json
   end
 
-  def build_url(path)
-    "#{ENV["AUTHY_API_URL"]}#{path}"
-  end
-
-  def build_params_for_authy(authy_id)
-    {
-      api_key: ENV["AUTHY_API_KEY"],
-      authy_id: authy_id
-    }
+  def build_url(environment, path)
+    "#{ENV["AUTHY_API_URL_"+environment.upcase]}#{path}"
   end
 end
 
 get "/" do
-  content_type :text
-
-  DOCUMENTATION
+  markdown File.read("README.md")
 end
 
-post "/registration" do
+post "/v1/:environment/:app_id/registration" do |environment, app_id|
   param :authy_id, Integer, required: true
 
-  params_for_authy = build_params_for_authy(params[:authy_id])
+  respond_with status: 404, body: "environment should be [prod|stg]" unless ["prod", "stg"].include? environment
 
-  response = Net::HTTP.post_form(URI.parse(build_url("/protected/json/sdk/registrations")), params_for_authy)
+  response = Net::HTTP.post_form(URI.parse(build_url(environment, "/protected/json/sdk/registrations")), {
+      api_key: API_KEYS["v1"][environment][app_id],
+      authy_id: params[:authy_id]
+    })
   response_code = response.code.to_i
 
   parsed_response = JSON.parse(response.body)
@@ -70,6 +46,36 @@ post "/registration" do
     respond_with status: response_code, body: parsed_response
 
   end
+end
+
+post "/v2/:environment/registration" do |environment|
+  param :user_id, String, required: true
+  param :app_ids, Array
+
+  # If apps are not indicated, add the user to all of them.
+  params[:app_ids] ||= API_KEYS["v2"][environment]
+
+  respond_with status: 404, body: "environment should be [prod|stg]" unless ["prod", "stg"].include? environment
+
+  environment = environment.upcase
+
+  payload = {
+    jti: "123456",
+    sub: ENV["ACCOUNT_SID_"+environment],
+    nbf: Time.now.to_i,
+    exp: (Time.now+5 * 60).to_i,
+    grants: {
+      authenticator: {
+        user_id: params[:user_id],
+        app_ids: params[:app_ids]
+      }
+    }
+  }
+  integration_api_key = ENV["INTEGRATION_API_KEY_"+environment]
+
+  jwt_token = JWT.encode(payload, integration_api_key, "HS256")
+
+  respond_with status: 200, body: { registration_token: jwt_token }
 end
 
 post "/verify/token" do
